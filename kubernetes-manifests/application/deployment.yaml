@@ -1,0 +1,80 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-crud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-crud
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: users-crud
+    spec:
+      containers:
+        - image: eliseevnp/users-crud:latest
+          name: users-crud
+          env:
+            - name: AWESOME_CONFIGMAP_VALUE
+              valueFrom:
+                configMapKeyRef:
+                  name: users-crud
+                  key: awesome.configmap.value
+            - name: MS_CFG_POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: users-crud
+                  key: db.name
+            - name: MS_CFG_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: users-crud
+                  key: db.username
+            - name: MS_CFG_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: users-crud
+                  key: db.password
+            - name: MS_CFG_POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: users-crud
+                  key: db.host
+            - name: MS_CFG_POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: users-crud
+                  key: db.port
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 40
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 40
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi

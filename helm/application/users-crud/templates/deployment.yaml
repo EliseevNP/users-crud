@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "users-crud.fullname" . }}
+  labels:
+    {{- include "users-crud.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "users-crud.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "users-crud.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: AWESOME_CONFIGMAP_VALUE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: awesome.configmap.value
+            - name: MS_CFG_POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: db.name
+            - name: MS_CFG_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: db.username
+            - name: MS_CFG_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: db.password
+            - name: MS_CFG_POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: db.host
+            - name: MS_CFG_POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "users-crud.fullname" . }}
+                  key: db.port
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 40
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 30
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 40
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
